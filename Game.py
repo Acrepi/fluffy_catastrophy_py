@@ -5,11 +5,10 @@ import pygame
 class Game:
 	def __init__(self):
 		pygame.init()
-		self._screen_width = 900
-		self._screen_height = 600
-		self._game_screen = pygame.display.set_mode((self._screen_width, self._screen_height))
-		self._window_name = "Game"
-		pygame.display.set_caption(self._window_name)
+		self._screen_width = 0
+		self._screen_height = 0
+		self._game_screen = None
+		self._window_name = ""
 		self._icon = ""
 		self._is_game_running = False
 		self._game_clock = 0
