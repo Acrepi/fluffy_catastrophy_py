@@ -70,9 +70,33 @@ class Game:
 			]
 		}
 
+		obstacle_sprite_sheet = {
+			"stand": [
+				pygame.image.load('assets\\graphics\\obstacle_1_stand_1.png')
+			],
+			"break": [
+				pygame.image.load('assets\\graphics\\obstacle_1_break_1.png'),
+				pygame.image.load('assets\\graphics\\obstacle_1_break_2.png'),
+				pygame.image.load('assets\\graphics\\obstacle_1_break_3.png')
+			],
+			"broken": [
+				pygame.image.load('assets\\graphics\\obstacle_1_broken_1.png')
+			]
+		}
+
+		# CREATE OBJECTS
+		lives = 3
+		print("Lives: " + str(lives))
 		obj = GameObject()
 		obj.set_size(100, 100)\
 			.set_position(50, 50)
+
+		obstacle = Obstacle()
+		obstacle.set_size(100, 100) \
+			.set_sprite_sheet(obstacle_sprite_sheet)\
+			.set_start_position(self._screen_width, 500)\
+			.set_pull_strength(-400)\
+			.reset_obstacle()
 
 		cat = Player()
 		cat.set_size(100, 100)\
@@ -97,10 +121,19 @@ class Game:
 
 			# RENDER GAME OBJECTS HERE
 			self._game_screen.fill("black")
-			obj.draw_hitbox(self._game_screen, "red")
+			obstacle.draw_object(self._game_screen, dt)
 			cat.draw_object(self._game_screen, dt)
-			#print(cat.check_collision(obj))
-			#pygame.draw.circle(self._game_screen, "red", pygame.Vector2(self._screen_width / 2, self._screen_height / 2), 40)
+
+			if obstacle.get_position()["x"] + obstacle.get_size()["x"] < 0:
+				obstacle.reset_obstacle()
+			if obstacle.check_collision(cat):
+				if obstacle.destroy_obstacle():
+					lives -= 1
+					print("Lives: " +  str(lives))
+					if lives == 0:
+						print("GAME OVER")
+						self.exit_game()
+
 
 			pygame.display.flip()
 			dt = self._game_clock.tick(self._fps_limit) / 1000
@@ -142,6 +175,112 @@ class GameObject:
 			if self._position_y + self._size_y > obj_pos["y"] and self._position_y < obj_pos["y"] + obj_size["y"]:
 				return True
 		return False
+
+
+class Obstacle(GameObject):
+	def __init__(self):
+		super().__init__()
+		self._start_position_x = 0
+		self._start_position_y = 0
+		self._sprite_sheet = {}
+		self._is_visible = True
+		self._is_destroyed = False
+		self._speed_x = 0
+		self._speed_y = 0
+		self._animation_name = "stand"
+		self._animation_frame = 0
+		self._animation_counter = 0
+		self._pull_strength = 0
+
+	def set_start_position(self, start_position_x, start_position_y):
+		self._start_position_x = start_position_x
+		self._start_position_y = start_position_y
+		return self
+
+	def set_size(self, width, height):
+		self._size_x = width
+		self._size_y = height
+		self._resize_sprite_sheet()
+		return self
+
+	def set_pull_strength(self, pull_strength):
+		self._pull_strength = pull_strength
+		return self
+
+	def _resize_sprite_sheet(self):
+		keys = list(self._sprite_sheet.keys())
+		if len(keys) > 0:
+			for i in range(0, len(keys)):
+				elem = len(self._sprite_sheet[keys[i]])
+				for j in range(0, elem):
+					self._sprite_sheet[keys[i]][j] = pygame.transform.scale(self._sprite_sheet[keys[i]][j], (self._size_x, self._size_y))
+
+	def set_sprite_sheet(self, sprite_sheet):
+		self._sprite_sheet = sprite_sheet
+		self._resize_sprite_sheet()
+		return self
+
+	def set_speed(self, speed_x, speed_y):
+		self._speed_x = speed_x
+		self._speed_y = speed_y
+		return self
+
+	def _animate(self, delta_time):
+		if self._animation_name == "break":
+			self._animation_counter += delta_time
+			if self._animation_counter >= 0.05:
+				self._animation_frame += 1
+				self._animation_counter = 0
+				if self._animation_frame == len(self._sprite_sheet["break"]):
+					self._change_animation("broken")
+
+	def _change_animation(self, animation_name):
+		if animation_name == "stand" and self._animation_name != "stand":
+			self._animation_name = "stand"
+			self._animation_frame = 0
+			self._animation_counter = 0
+		elif animation_name == "break" and self._animation_name != "break":
+			self._animation_name = "break"
+			self._animation_frame = 0
+			self._animation_counter = 0
+		elif animation_name == "broken" and self._animation_name != "broken":
+			self._animation_name = "broken"
+			self._animation_frame = 0
+			self._animation_counter = 0
+
+	def draw_object(self, game_screen, delta_time):
+		self._position_x += self._pull_strength * delta_time
+		self._animate(delta_time)
+		game_screen.blit(self._sprite_sheet[self._animation_name][self._animation_frame], (self._position_x, self._position_y))
+
+	def check_collision(self, game_object):
+		obj_pos = game_object.get_position()
+		obj_size = game_object.get_size()
+		if self._position_x + self._size_x > obj_pos["x"] and self._position_x < obj_pos["x"] + obj_size["x"]:
+			if self._position_y + self._size_y > obj_pos["y"] and self._position_y < obj_pos["y"] + obj_size["y"]:
+				return True
+		return False
+
+	def destroy_obstacle(self):
+		if not self._is_destroyed:
+			self._is_destroyed = True
+			self._change_animation("break")
+			return True
+		return False
+
+	def fix_obstacle(self):
+		if self._is_destroyed:
+			self._is_destroyed = False
+			self._change_animation("stand")
+			return True
+		return False
+
+	def reset_obstacle(self):
+		self._position_x = self._start_position_x
+		self._position_y = self._start_position_y
+		self._speed_x = 0
+		self._speed_y = 0
+		self.fix_obstacle()
 
 
 class Player(GameObject):
