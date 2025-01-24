@@ -86,24 +86,33 @@ class Game:
 
 		# CREATE OBJECTS
 		lives = 3
-		print("Lives: " + str(lives))
-		obj = GameObject()
-		obj.set_size(100, 100)\
-			.set_position(50, 50)
+		points = 0
+		speed_up_timer = 0
+		speed_up_value = 1
+
+		my_font = pygame.font.SysFont('Comic Sans MS', 32)
+
 
 		obstacle = Obstacle()
 		obstacle.set_size(100, 100) \
-			.set_sprite_sheet(obstacle_sprite_sheet)\
-			.set_start_position(self._screen_width, 500)\
-			.set_pull_strength(-400)\
+			.set_sprite_sheet(obstacle_sprite_sheet) \
+			.set_start_position(self._screen_width, 500) \
+			.set_pull_strength(-400) \
 			.reset_obstacle()
 
+		obstacle2 = Obstacle()
+		obstacle2.set_size(100, 100) \
+			.set_sprite_sheet(obstacle_sprite_sheet) \
+			.set_start_position(self._screen_width, 500) \
+			.set_pull_strength(-400) \
+			.set_position(self._screen_width + 120, 500)
+
 		cat = Player()
-		cat.set_size(100, 100)\
-			.set_sprite_sheet(cat_sprite_sheet)\
-			.set_position(50, 10)\
-			.set_gravity(18)\
-			.set_jump_force(11)\
+		cat.set_size(100, 100) \
+			.set_sprite_sheet(cat_sprite_sheet) \
+			.set_position(50, 10) \
+			.set_gravity(18) \
+			.set_jump_force(11) \
 			.set_max_jumps(2)
 
 		while self._is_game_running:
@@ -121,22 +130,44 @@ class Game:
 
 			# RENDER GAME OBJECTS HERE
 			self._game_screen.fill("black")
+			text_points = my_font.render("Points: " + str(points), False, (255, 255, 255))
+			text_lives = my_font.render("Lives:  " + str(lives), False, (255, 255, 255))
+			self._game_screen.blit(text_points, (10, 0))
+			self._game_screen.blit(text_lives, (10, 37))
 			obstacle.draw_object(self._game_screen, dt)
+			obstacle2.draw_object(self._game_screen, dt)
 			cat.draw_object(self._game_screen, dt)
 
 			if obstacle.get_position()["x"] + obstacle.get_size()["x"] < 0:
 				obstacle.reset_obstacle()
+			if obstacle2.get_position()["x"] + obstacle2.get_size()["x"] < 0:
+				obstacle2.reset_obstacle()
 			if obstacle.check_collision(cat):
 				if obstacle.destroy_obstacle():
 					lives -= 1
-					print("Lives: " +  str(lives))
+					if lives == 0:
+						print("GAME OVER")
+						self.exit_game()
+			if obstacle2.check_collision(cat):
+				if obstacle2.destroy_obstacle():
+					lives -= 1
 					if lives == 0:
 						print("GAME OVER")
 						self.exit_game()
 
 
+			# UPDATE SCREEN
 			pygame.display.flip()
 			dt = self._game_clock.tick(self._fps_limit) / 1000
+
+			points = points + round(dt * 1000)
+
+			# todo: fix some time errors (second object gets slightly faster than the first one)
+			speed_up_timer += dt
+			if speed_up_timer >= 1:
+				speed_up_timer = 0
+				obstacle.set_pull_strength(obstacle.get_pull_strength() - speed_up_value)
+				obstacle2.set_pull_strength(obstacle.get_pull_strength() - speed_up_value)
 
 	def exit_game(self):
 		self._is_game_running = False
@@ -281,6 +312,9 @@ class Obstacle(GameObject):
 		self._speed_x = 0
 		self._speed_y = 0
 		self.fix_obstacle()
+
+	def get_pull_strength(self):
+		return self._pull_strength
 
 
 class Player(GameObject):
