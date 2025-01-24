@@ -162,12 +162,11 @@ class Game:
 
 			points = points + round(dt * 1000)
 
-			# todo: fix some time errors (second object gets slightly faster than the first one)
 			speed_up_timer += dt
 			if speed_up_timer >= 1:
 				speed_up_timer = 0
 				obstacle.set_pull_strength(obstacle.get_pull_strength() - speed_up_value)
-				obstacle2.set_pull_strength(obstacle.get_pull_strength() - speed_up_value)
+				obstacle2.set_pull_strength(obstacle2.get_pull_strength() - speed_up_value)
 
 	def exit_game(self):
 		self._is_game_running = False
